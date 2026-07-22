@@ -135,15 +135,58 @@ source ~/ros2_ws/install/setup.bash
 
 動作確認では、VOICEVOX Engine、ROS 2ノード、テストメッセージ送信の順に起動します。
 
-### ターミナル1：VOICEVOX Engineの確認
+### ターミナル1：VOICEVOX Engineの起動
 
-VOICEVOXを起動してから、次を実行します。
+ROS 2ノードを起動する前に、VOICEVOX Engineを起動します。以下のいずれか1つの方法を使用してください。複数の方法を同時に実行すると、ポート`50021`が競合します。
+
+#### 方法A：VOICEVOXアプリから起動する
+
+Ubuntuのアプリ一覧を開き、`VOICEVOX`を検索して起動します。
+
+VOICEVOXの画面が表示されたら、アプリを閉じずに起動したままにしてください。VOICEVOXアプリを起動すると、内部のVOICEVOX Engineも自動的に起動します。
+
+別のターミナルを開き、次のコマンドで起動状態を確認します。
 
 ```bash
-curl http://127.0.0.1:50021/version
+curl --fail --silent http://127.0.0.1:50021/version
+echo
 ```
 
-バージョン番号が返ることを確認してください。
+次のようにバージョン番号が表示されれば起動成功です。
+
+```text
+"0.xx.x"
+```
+
+#### 方法B：VOICEVOXアプリをターミナルから起動する
+
+公式インストーラーを標準設定で使用した場合、次のコマンドで起動できます。
+
+```bash
+~/.voicevox/VOICEVOX.AppImage
+```
+
+このターミナルはVOICEVOXを起動したままにしておきます。
+
+ファイルが見つからない場合は、インストール先を確認します。
+
+```bash
+find ~/.voicevox -maxdepth 2 -type f -name 'VOICEVOX*.AppImage'
+```
+
+実行権限のエラーが出る場合は、次を実行してから再度起動します。
+
+```bash
+chmod +x ~/.voicevox/VOICEVOX.AppImage
+~/.voicevox/VOICEVOX.AppImage
+```
+
+起動後、別のターミナルで確認します。
+
+```bash
+curl --fail --silent http://127.0.0.1:50021/version
+echo
+```
 
 ### ターミナル2：ROS 2ノードの起動
 
