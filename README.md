@@ -1,25 +1,22 @@
 # oit_voicevox
 
-VOICEVOX EngineをROS 2から利用するための音声合成ノードです。
+VOICEVOXをROS 2から利用するための音声合成パッケージです。
 
-ROS 2の`std_msgs/msg/String`メッセージとして文章を送信すると、VOICEVOX Engineへ音声合成を要求し、生成された音声をPCのスピーカーから再生します。
+`std_msgs/msg/String`型のメッセージを`/voicevox/speak`トピックへ送信すると、VOICEVOX Engineで音声を生成し、PCのスピーカーから再生します。
+
+付属のlaunchファイルを使用すると、次の処理を1つのコマンドで実行できます。
+
+1. VOICEVOX Engineの起動
+2. Engineの起動完了待ち
+3. `voicevox_node`の起動
 
 ## 動作確認環境
 
 - Ubuntu 24.04 LTS
 - ROS 2 Jazzy
 - Python 3
-- VOICEVOX Engine
+- VOICEVOX AppImage
 - 音声出力が可能なPC
-
-ROS 2 JazzyはUbuntu 24.04を対象としています。
-
-## 処理の流れ
-
-1. ROS 2トピックから文章を受信
-2. VOICEVOX Engineへ音声クエリを送信
-3. 音声データを生成
-4. 生成した音声をスピーカーから再生
 
 ## 事前準備
 
@@ -33,13 +30,6 @@ https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-```
-
-毎回実行したくない場合は、次の設定を追加します。
-
-```bash
-echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
-source ~/.bashrc
 ```
 
 ### 2. 必要なパッケージのインストール
@@ -62,29 +52,33 @@ sudo rosdep init
 rosdep update
 ```
 
-`sudo rosdep init`で「already been initialized」と表示された場合は、そのまま次へ進んでください。
+`sudo rosdep init`で、すでに初期化されていることを示すメッセージが表示された場合は、そのまま次へ進んでください。
 
-### 3. VOICEVOX Engineの準備
+### 3. VOICEVOXのインストール
 
-VOICEVOXを公式サイトからダウンロードしてインストールします。
+VOICEVOX公式サイトからLinux版をダウンロードし、インストールしてください。
 
 https://voicevox.hiroshiba.jp/
 
-VOICEVOXを起動した状態で、次のコマンドを実行してください。
-
-```bash
-curl http://127.0.0.1:50021/version
-```
-
-バージョン番号が返れば、VOICEVOX Engineは正常に起動しています。
-
-例：
+インストール後、VOICEVOXのAppImageが存在する場所を確認します。標準的な保存先は次のとおりです。
 
 ```text
-"0.xx.x"
+/home/ユーザー名/.voicevox/VOICEVOX.AppImage
 ```
 
-`Failed to connect`や`Connection refused`と表示された場合は、VOICEVOX Engineが起動していません。VOICEVOXを起動してから、もう一度確認してください。
+次のコマンドでも検索できます。
+
+```bash
+find "$HOME" -maxdepth 4 -type f -name 'VOICEVOX*.AppImage' 2>/dev/null
+```
+
+AppImageに実行権限がない場合は、実際の保存先を指定して権限を付与します。
+
+```bash
+chmod +x /home/ユーザー名/.voicevox/VOICEVOX.AppImage
+```
+
+以降の`voicevox_path`には、ここで確認した絶対パスを指定します。`ユーザー名`の部分をそのまま入力してはいけません。
 
 ## インストール
 
@@ -101,7 +95,7 @@ cd ~/ros2_ws/src
 git clone https://github.com/peimaru26/oit_voicevox.git
 ```
 
-このリポジトリがPrivateの場合は、GitHubアカウントへのログインとリポジトリへのアクセス権が必要です。
+リポジトリがPrivateの場合は、GitHubへのログインとアクセス権が必要です。
 
 ### 3. 依存パッケージのインストール
 
@@ -126,149 +120,111 @@ Summary: 1 package finished
 ### 5. ワークスペースの読み込み
 
 ```bash
+source /opt/ros/jazzy/setup.bash
 source ~/ros2_ws/install/setup.bash
 ```
 
-新しいターミナルを開くたびに、このコマンドを実行する必要があります。
+新しいターミナルを開いた場合は、再度この2行を実行してください。
 
 ## 動作確認
 
-動作確認では、VOICEVOX Engine、ROS 2ノード、テストメッセージ送信の順に起動します。
+### ターミナル1：VOICEVOX EngineとROS 2ノードの起動
 
-### ターミナル1：VOICEVOX Engineの起動
+VOICEVOXアプリを手動で起動する必要はありません。launchファイルがVOICEVOX EngineとROS 2ノードを順番に起動します。
 
-ROS 2ノードを起動する前に、VOICEVOX Engineを起動します。以下のいずれか1つの方法を使用してください。複数の方法を同時に実行すると、ポート`50021`が競合します。
-
-#### 方法A：VOICEVOXアプリから起動する
-
-Ubuntuのアプリ一覧を開き、`VOICEVOX`を検索して起動します。
-
-VOICEVOXの画面が表示されたら、アプリを閉じずに起動したままにしてください。VOICEVOXアプリを起動すると、内部のVOICEVOX Engineも自動的に起動します。
-
-別のターミナルを開き、次のコマンドで起動状態を確認します。
-
-```bash
-curl --fail --silent http://127.0.0.1:50021/version
-echo
-```
-
-次のようにバージョン番号が表示されれば起動成功です。
-
-```text
-"0.xx.x"
-```
-
-#### 方法B：VOICEVOXアプリをターミナルから起動する
-
-公式インストーラーを標準設定で使用した場合、次のコマンドで起動できます。
-
-```bash
-~/.voicevox/VOICEVOX.AppImage
-```
-
-このターミナルはVOICEVOXを起動したままにしておきます。
-
-ファイルが見つからない場合は、インストール先を確認します。
-
-```bash
-find ~/.voicevox -maxdepth 2 -type f -name 'VOICEVOX*.AppImage'
-```
-
-実行権限のエラーが出る場合は、次を実行してから再度起動します。
-
-```bash
-chmod +x ~/.voicevox/VOICEVOX.AppImage
-~/.voicevox/VOICEVOX.AppImage
-```
-
-起動後、別のターミナルで確認します。
-
-```bash
-curl --fail --silent http://127.0.0.1:50021/version
-echo
-```
-
-### ターミナル2：ROS 2ノードの起動
+`voicevox_path`には、自分のPCに保存されている`VOICEVOX.AppImage`の絶対パスを指定してください。
 
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/ros2_ws/install/setup.bash
 
-ros2 run oit_voicevox voicevox_node
+ros2 launch oit_voicevox voicevox.launch.py \
+  voicevox_path:=/home/ユーザー名/.voicevox/VOICEVOX.AppImage
 ```
 
-このターミナルは、ノードを起動したままにしておきます。
+例えば、AppImageが`/home/oit/.voicevox/VOICEVOX.AppImage`にある場合は、次のように実行します。
 
-### ターミナル3：文章の送信
+```bash
+ros2 launch oit_voicevox voicevox.launch.py \
+  voicevox_path:=/home/oit/.voicevox/VOICEVOX.AppImage
+```
 
-別のターミナルを開きます。
+起動処理中は次のメッセージが表示されます。
+
+```text
+VOICEVOXエンジンの起動を待っています...
+VOICEVOXエンジンの起動を確認しました。
+```
+
+2行目が表示されると、VOICEVOX Engineへの接続が完了し、`voicevox_node`が起動します。このターミナルは起動したままにしてください。
+
+### ターミナル2：文章の送信
+
+別のターミナルを開き、ROS 2の環境を読み込みます。
 
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/ros2_ws/install/setup.bash
 ```
 
-起動中のノードを確認します。
+次のコマンドでテスト文章を1回だけ送信します。
 
 ```bash
-ros2 node list
+ros2 topic pub --once /voicevox/speak std_msgs/msg/String \
+  "{data: 'こんにちは'}"
 ```
 
-VOICEVOXノードが表示されることを確認してください。
+PCのスピーカーから「こんにちは」と読み上げられれば、動作確認は完了です。
 
-次に、テスト文章を送信します。
+## launch引数
+
+launchファイルでは、次の引数を指定できます。
+
+| 引数 | 初期値 | 説明 |
+| --- | --- | --- |
+| `voicevox_path` | `~/.voicevox/VOICEVOX.AppImage` | VOICEVOX AppImageの保存先 |
+| `voicevox_url` | `http://127.0.0.1:50021` | VOICEVOX EngineのURL |
+| `speaker_id` | `3` | 使用するVOICEVOXの話者ID |
+| `no_sandbox` | `false` | サンドボックス関連のエラーが出る場合に`true`を指定 |
+
+話者IDを変更する場合は、次のように指定します。
 
 ```bash
-ros2 topic pub --once /speak std_msgs/msg/String "{data: 'こんにちは。VOICEVOXの動作確認です。'}"
+ros2 launch oit_voicevox voicevox.launch.py \
+  voicevox_path:=/home/ユーザー名/.voicevox/VOICEVOX.AppImage \
+  speaker_id:=3
 ```
 
-PCのスピーカーから文章が読み上げられれば、動作確認は完了です。
-
-## 購読トピックの確認
-
-`/speak`へ送信しても発話しない場合は、ノードが購読しているトピックを確認します。
+サンドボックス関連のエラーが出る場合は、次のように起動します。
 
 ```bash
-ros2 node list
+ros2 launch oit_voicevox voicevox.launch.py \
+  voicevox_path:=/home/ユーザー名/.voicevox/VOICEVOX.AppImage \
+  no_sandbox:=true
 ```
 
-表示されたVOICEVOXノード名を使って、次を実行します。
+利用可能な引数は、次のコマンドでも確認できます。
 
 ```bash
-ros2 node info /voicevox_node
-```
-
-`Subscribers`欄に、次のような`std_msgs/msg/String`型のトピックが表示されます。
-
-```text
-/speak: std_msgs/msg/String
-```
-
-トピック名が`/speak`以外の場合は、実際に表示された名前へ文章を送信してください。
-
-```bash
-ros2 topic pub --once 実際のトピック名 std_msgs/msg/String \
-  "{data: 'こんにちは。VOICEVOXの動作確認です。'}"
+ros2 launch oit_voicevox voicevox.launch.py --show-args
 ```
 
 ## 終了方法
 
-ROS 2ノードを起動しているターミナルで、`Ctrl + C`を押します。
-
-VOICEVOX Engineも不要になった場合は、VOICEVOXを終了してください。
+launchを実行しているターミナルで`Ctrl + C`を押してください。launchから起動したVOICEVOX EngineとROS 2ノードが終了します。
 
 ## よくあるエラー
 
 ### `Package 'oit_voicevox' not found`
 
-ワークスペースを読み込めていません。
+ビルド後のワークスペースを読み込めていません。
 
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/ros2_ws/install/setup.bash
 ```
 
-改善しない場合は、もう一度ビルドします。
+改善しない場合は再ビルドします。
 
 ```bash
 cd ~/ros2_ws
@@ -276,41 +232,79 @@ colcon build --packages-select oit_voicevox
 source install/setup.bash
 ```
 
-### VOICEVOX Engineへ接続できない
+### launchファイルが見つからない
 
-次のコマンドで確認します。
+次のようなエラーが出る場合は、launchファイルを追加する前の状態がインストールされている可能性があります。
 
-```bash
-curl http://127.0.0.1:50021/version
+```text
+file 'voicevox.launch.py' was not found
 ```
 
-接続できない場合は、VOICEVOX Engineを起動してください。また、ROS 2ノードとVOICEVOX Engineが同じPC上で動作していることを確認してください。
+リポジトリを更新してから再ビルドします。
 
-### 発話メッセージを送っても音が出ない
+```bash
+cd ~/ros2_ws/src/oit_voicevox
+git pull
 
-まず音声デバイスを確認します。
+cd ~/ros2_ws
+colcon build --packages-select oit_voicevox
+source install/setup.bash
+```
+
+### `VOICEVOX.AppImage`が見つからない
+
+指定したパスが間違っています。保存先を検索します。
+
+```bash
+find "$HOME" -maxdepth 4 -type f -name 'VOICEVOX*.AppImage' 2>/dev/null
+```
+
+表示された絶対パスを`voicevox_path`へ指定してください。
+
+### `Permission denied`
+
+AppImageに実行権限を付与します。
+
+```bash
+chmod +x /実際の保存先/VOICEVOX.AppImage
+```
+
+### VOICEVOX Engineの起動待ちから進まない
+
+VOICEVOX AppImageの起動に失敗している可能性があります。まずlaunchを`Ctrl + C`で終了し、AppImageを単体で実行してエラーを確認してください。
+
+```bash
+/実際の保存先/VOICEVOX.AppImage
+```
+
+また、すでに別のVOICEVOXが起動している場合は、ポート`50021`が競合する可能性があります。手動で起動しているVOICEVOXを終了してから、もう一度launchを実行してください。
+
+### サンドボックス関連のエラーが表示される
+
+`no_sandbox:=true`を追加して起動します。
+
+```bash
+ros2 launch oit_voicevox voicevox.launch.py \
+  voicevox_path:=/実際の保存先/VOICEVOX.AppImage \
+  no_sandbox:=true
+```
+
+### メッセージを送信しても音が出ない
+
+ノードとトピックを確認します。
+
+```bash
+ros2 node list
+ros2 topic info /voicevox/speak
+```
+
+音声出力デバイスも確認してください。
 
 ```bash
 aplay -l
 ```
 
-次に、PCがミュートになっていないか、正しい音声出力先が選択されているか確認してください。
-
-### Pythonの`requests`が見つからない
-
-```bash
-sudo apt install python3-requests
-```
-
-### コードを更新した後に変更が反映されない
-
-再ビルドと環境の再読み込みが必要です。
-
-```bash
-cd ~/ros2_ws
-colcon build --packages-select oit_voicevox
-source install/setup.bash
-```
+PCがミュートになっていないか、正しい音声出力先が選択されているかも確認してください。
 
 ## ライセンス・利用上の注意
 
