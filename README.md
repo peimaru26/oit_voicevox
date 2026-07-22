@@ -150,3 +150,127 @@ curl http://127.0.0.1:50021/version
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/ros2_ws/install/setup.bash
+
+ros2 run oit_voicevox voicevox_node
+```
+
+このターミナルは、ノードを起動したままにしておきます。
+
+### ターミナル3：文章の送信
+
+別のターミナルを開きます。
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source ~/ros2_ws/install/setup.bash
+```
+
+起動中のノードを確認します。
+
+```bash
+ros2 node list
+```
+
+VOICEVOXノードが表示されることを確認してください。
+
+次に、テスト文章を送信します。
+
+```bash
+ros2 topic pub --once /speak std_msgs/msg/String "{data: 'こんにちは。VOICEVOXの動作確認です。'}"
+```
+
+PCのスピーカーから文章が読み上げられれば、動作確認は完了です。
+
+## 購読トピックの確認
+
+`/speak`へ送信しても発話しない場合は、ノードが購読しているトピックを確認します。
+
+```bash
+ros2 node list
+```
+
+表示されたVOICEVOXノード名を使って、次を実行します。
+
+```bash
+ros2 node info /voicevox_node
+```
+
+`Subscribers`欄に、次のような`std_msgs/msg/String`型のトピックが表示されます。
+
+```text
+/speak: std_msgs/msg/String
+```
+
+トピック名が`/speak`以外の場合は、実際に表示された名前へ文章を送信してください。
+
+```bash
+ros2 topic pub --once 実際のトピック名 std_msgs/msg/String \
+  "{data: 'こんにちは。VOICEVOXの動作確認です。'}"
+```
+
+## 終了方法
+
+ROS 2ノードを起動しているターミナルで、`Ctrl + C`を押します。
+
+VOICEVOX Engineも不要になった場合は、VOICEVOXを終了してください。
+
+## よくあるエラー
+
+### `Package 'oit_voicevox' not found`
+
+ワークスペースを読み込めていません。
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source ~/ros2_ws/install/setup.bash
+```
+
+改善しない場合は、もう一度ビルドします。
+
+```bash
+cd ~/ros2_ws
+colcon build --packages-select oit_voicevox
+source install/setup.bash
+```
+
+### VOICEVOX Engineへ接続できない
+
+次のコマンドで確認します。
+
+```bash
+curl http://127.0.0.1:50021/version
+```
+
+接続できない場合は、VOICEVOX Engineを起動してください。また、ROS 2ノードとVOICEVOX Engineが同じPC上で動作していることを確認してください。
+
+### 発話メッセージを送っても音が出ない
+
+まず音声デバイスを確認します。
+
+```bash
+aplay -l
+```
+
+次に、PCがミュートになっていないか、正しい音声出力先が選択されているか確認してください。
+
+### Pythonの`requests`が見つからない
+
+```bash
+sudo apt install python3-requests
+```
+
+### コードを更新した後に変更が反映されない
+
+再ビルドと環境の再読み込みが必要です。
+
+```bash
+cd ~/ros2_ws
+colcon build --packages-select oit_voicevox
+source install/setup.bash
+```
+
+## ライセンス・利用上の注意
+
+VOICEVOXおよび各音声キャラクターを利用する場合は、それぞれの利用規約を確認してください。
+
+https://voicevox.hiroshiba.jp/term/
