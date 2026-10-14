@@ -1,5 +1,6 @@
-import requests
 from pathlib import Path
+
+import requests
 
 # 起動中のVOICEVOXのアドレス
 base_url = "http://127.0.0.1:50021"

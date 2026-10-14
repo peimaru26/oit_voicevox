@@ -1,5 +1,6 @@
 import os
 from glob import glob
+
 from setuptools import find_packages, setup
 
 package_name = 'oit_voicevox'
@@ -28,7 +29,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-		 'voicevox_node = oit_voicevox.voicevox_node:main',
+            'voicevox_node = oit_voicevox.voicevox_node:main',
         ],
     },
 )

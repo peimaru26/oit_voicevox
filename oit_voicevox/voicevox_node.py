@@ -2,8 +2,8 @@ import os
 import subprocess
 import tempfile
 
-import requests
 import rclpy
+import requests
 from rclpy.node import Node
 from std_msgs.msg import String
 
@@ -21,7 +21,8 @@ class VoicevoxNode(Node):
         )
 
         self.speaker_id = self.get_parameter("speaker_id").value
-        self.voicevox_url = self.get_parameter("voicevox_url").value.rstrip("/")
+        self.voicevox_url = self.get_parameter(
+            "voicevox_url").value.rstrip("/")
 
         # /voicevox/speakトピックを受信
         self.subscription = self.create_subscription(

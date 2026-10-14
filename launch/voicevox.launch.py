@@ -9,11 +9,13 @@ VOICEVOXエンジンの起動 → 起動完了待ち → voicevox_nodeの起動 
     ros2 launch oit_voicevox voicevox.launch.py voicevox_path:=/home/xxx/.voicevox/VOICEVOX.AppImage speaker_id:=3
 """
 
+from launch_ros.actions import Node
+
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, RegisterEventHandler
+from launch.actions import (DeclareLaunchArgument, ExecuteProcess,
+                            RegisterEventHandler)
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
 
 
 def generate_launch_description():
@@ -21,7 +23,8 @@ def generate_launch_description():
     voicevox_path_arg = DeclareLaunchArgument(
         "voicevox_path",
         default_value=PathJoinSubstitution(
-            [LaunchConfiguration("home_dir", default="~"), ".voicevox", "VOICEVOX.AppImage"]
+            [LaunchConfiguration("home_dir", default="~"),
+             ".voicevox", "VOICEVOX.AppImage"]
         ),
         description="VOICEVOX.AppImageへのパス",
     )
