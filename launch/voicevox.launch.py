@@ -8,51 +8,45 @@ VOICEVOXエンジンの起動 → 起動完了待ち → voicevox_nodeの起動 
     ros2 launch oit_voicevox voicevox.launch.py
     ros2 launch oit_voicevox voicevox.launch.py voicevox_path:=/home/xxx/.voicevox/VOICEVOX.AppImage speaker_id:=3
 """
+from pathlib import Path
+from types import SimpleNamespace
 
 from launch_ros.actions import Node
 
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess,
-                            RegisterEventHandler)
+                            OpaqueFunction, RegisterEventHandler)
 from launch.event_handlers import OnProcessExit
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import LaunchConfiguration
 
 
-def generate_launch_description():
-    # ---- launch引数（環境に合わせて上書き可能）----
-    voicevox_path_arg = DeclareLaunchArgument(
-        "voicevox_path",
-        default_value=PathJoinSubstitution(
-            [LaunchConfiguration("home_dir", default="~"),
-             ".voicevox", "VOICEVOX.AppImage"]
-        ),
-        description="VOICEVOX.AppImageへのパス",
-    )
-    voicevox_url_arg = DeclareLaunchArgument(
-        "voicevox_url",
-        default_value="http://127.0.0.1:50021",
-        description="VOICEVOXエンジンのURL",
-    )
-    speaker_id_arg = DeclareLaunchArgument(
-        "speaker_id",
-        default_value="3",
-        description="話者ID",
-    )
-    no_sandbox_arg = DeclareLaunchArgument(
-        "no_sandbox",
-        default_value="false",
-        description="サンドボックスエラーが出る環境ではtrueにする",
-    )
+def declare_arg(name, default_value, description="", choices=None):
+    return SimpleNamespace(
+        name=name,
+        arg=DeclareLaunchArgument(
+            name, default_value=default_value, description=description, choices=choices),
+        conf=LaunchConfiguration(name))
 
-    voicevox_path = LaunchConfiguration("voicevox_path")
-    voicevox_url = LaunchConfiguration("voicevox_url")
-    speaker_id = LaunchConfiguration("speaker_id")
+
+voicevox_path = declare_arg("voicevox_path",
+                            Path.home() / ".voicevox" / "VOICEVOX.AppImage", "VOICEVOX.AppImageへのパス")
+voicevox_url = declare_arg("voicevox_url", "http://127.0.0.1:50021",
+                           "VOICEVOXエンジンのURL")
+speaker_id = declare_arg("speaker_id", "3", "話者ID")
+no_sandbox = declare_arg("no_sandbox", "false", "サンドボックスエラーが出る環境ではtrueにする")
+
+
+def launch_setup(context, *args, **kwargs):
+    voicevox_path_value = voicevox_path.conf.perform(context)
+    voicevox_url_value = voicevox_url.conf.perform(context)
+    speaker_id_value = int(speaker_id.conf.perform(context))
+    no_sandbox_value = no_sandbox.conf.perform(context)
 
     # ---- 1. VOICEVOXエンジンを起動 ----
     voicevox_engine = ExecuteProcess(
         cmd=["bash", "-c",
              '"$0" $( [ "$1" = "true" ] && echo --no-sandbox )',
-             voicevox_path, LaunchConfiguration("no_sandbox")],
+             voicevox_path_value, no_sandbox_value],
         shell=False,
         output="log",
     )
@@ -63,7 +57,7 @@ def generate_launch_description():
              'echo "VOICEVOXエンジンの起動を待っています..."; '
              'until curl -sf "$0/version" > /dev/null; do sleep 0.5; done; '
              'echo "VOICEVOXエンジンの起動を確認しました。"',
-             voicevox_url],
+             voicevox_url_value],
         shell=False,
         output="screen",
     )
@@ -75,8 +69,8 @@ def generate_launch_description():
         name="voicevox_node",
         output="screen",
         parameters=[{
-            "speaker_id": speaker_id,
-            "voicevox_url": voicevox_url,
+            "speaker_id": speaker_id_value,
+            "voicevox_url": voicevox_url_value,
         }],
     )
 
@@ -87,12 +81,11 @@ def generate_launch_description():
         )
     )
 
+    return [voicevox_engine, wait_for_engine, start_node_when_ready]
+
+
+def generate_launch_description():
     return LaunchDescription([
-        voicevox_path_arg,
-        voicevox_url_arg,
-        speaker_id_arg,
-        no_sandbox_arg,
-        voicevox_engine,
-        wait_for_engine,
-        start_node_when_ready,
+        voicevox_path.arg, voicevox_url.arg, speaker_id.arg, no_sandbox.arg,
+        OpaqueFunction(function=launch_setup)
     ])
