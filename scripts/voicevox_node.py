@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import subprocess
 import tempfile
@@ -104,16 +105,18 @@ class VoicevoxNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
-    node = VoicevoxNode()
+    node = None
 
     try:
+        node = VoicevoxNode()
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        if node is not None:
+            node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

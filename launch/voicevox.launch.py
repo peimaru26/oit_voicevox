@@ -40,15 +40,17 @@ def launch_setup(context, *args, **kwargs):
     voicevox_path_value = voicevox_path.conf.perform(context)
     voicevox_url_value = voicevox_url.conf.perform(context)
     speaker_id_value = int(speaker_id.conf.perform(context))
-    no_sandbox_value = no_sandbox.conf.perform(context)
+    no_sandbox_value = no_sandbox.conf.perform(context).lower() == 'true'
+
+    cmd_list = ['ros2', 'run', 'oit_voicevox',
+                'run_voicevox.sh', voicevox_path_value]
+    if no_sandbox_value:
+        cmd_list.append('--no-sandbox')
 
     # ---- 1. VOICEVOXエンジンを起動 ----
     voicevox_engine = ExecuteProcess(
-        cmd=["bash", "-c",
-             '"$0" $( [ "$1" = "true" ] && echo --no-sandbox )',
-             voicevox_path_value, no_sandbox_value],
-        shell=False,
-        output="log",
+        cmd=cmd_list,
+        output="screen"
     )
 
     # ---- 2. VOICEVOXのHTTPサーバーが応答するまで待機 ----
@@ -65,7 +67,7 @@ def launch_setup(context, *args, **kwargs):
     # ---- 3. voicevox_nodeを起動 ----
     voicevox_node = Node(
         package="oit_voicevox",
-        executable="voicevox_node",
+        executable="voicevox_node.py",
         name="voicevox_node",
         output="screen",
         parameters=[{
