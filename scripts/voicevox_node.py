@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import subprocess
 import tempfile
 
@@ -44,6 +45,10 @@ class VoicevoxNode(Node):
         if not text:
             self.get_logger().warning("空の文章を受信しました。")
             return
+
+        # 数字と数字の間にあるハイフンを「の」に変換する
+        # 例: 5-1 -> 5の1
+        text = re.sub(r'(?<=\d)-(?=\d)', 'の', text)
 
         self.get_logger().info(f"受信した文章: {text}")
 
